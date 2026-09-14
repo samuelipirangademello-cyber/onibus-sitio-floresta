@@ -1,0 +1,16 @@
+workflows:
+  android-release:
+    name: Ônibus Sítio Floresta - Android APK
+    max_build_duration: 30
+    instance_type: linux_x2
+    environment:
+      flutter: stable
+    scripts:
+      - name: Instalar dependências
+        script: flutter pub get
+      - name: Rodar testes
+        script: flutter test
+      - name: Gerar APK release
+        script: flutter build apk --release
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk
