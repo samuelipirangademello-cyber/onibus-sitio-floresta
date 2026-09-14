@@ -87,13 +87,27 @@ O APK fica em `build/app/outputs/flutter-apk/app-release.apk`.
 
 ## Build automático via Codemagic
 
-Este repositório já inclui um `codemagic.yaml` na raiz com um workflow
-(`android-release`) que instala as dependências, roda os testes e gera o
-APK release automaticamente. Basta conectar o repositório no Codemagic e
-rodar o workflow — nenhuma configuração adicional é necessária, pois o
-build usa a assinatura de debug padrão (suficiente para instalar e testar
-o APK; para publicar na Play Store, configure sua própria chave de
-assinatura em `android/app/build.gradle`).
+Este repositório já inclui um `codemagic.yaml` na raiz com um único
+workflow (`android`) que instala as dependências, roda os testes e gera
+o APK release automaticamente — o build usa a assinatura de debug padrão
+(suficiente para instalar e testar o APK; para publicar na Play Store,
+configure sua própria chave de assinatura em `android/app/build.gradle`).
+
+Este projeto **não tem pasta `/ios`** — é um app Android puro. Se o
+Codemagic tentar rodar um build iOS mesmo assim (erro do tipo
+`Did not find xcodeproj from .../ios`), o problema não está neste
+repositório: significa que o app, no painel do Codemagic, ainda está
+configurado para usar o "Workflow Editor" (UI) em vez do
+`codemagic.yaml`, ou que sobrou um workflow iOS criado automaticamente
+quando o app foi conectado pela primeira vez. Para corrigir, no painel
+do Codemagic:
+
+1. Abra o app → **Settings** (ícone de engrenagem).
+2. Em **Build configuration**, selecione **"codemagic.yaml"** (em vez de
+   "Workflow Editor"), se ainda não estiver selecionado.
+3. Caso exista algum workflow iOS criado pela interface (fora do
+   `codemagic.yaml`), remova-o ou desative-o em **Workflows**.
+4. Ao iniciar um novo build, selecione o workflow **`android`**.
 
 ## Ícone do aplicativo
 
