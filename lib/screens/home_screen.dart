@@ -4,14 +4,24 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../services/schedule_service.dart';
-import '../widgets/current_clock.dart';
-import '../widgets/direction_card.dart';
+import '../widgets/app_header.dart';
+import '../widgets/route_block.dart';
+import '../widgets/section_header.dart';
 
 const String _horariosSiteUrl = 'https://www.portalprati.com.br/pelotas/horarios';
 
-/// Tela unica do aplicativo: relogio, e os proximos onibus nos dois
-/// sentidos (ou o aviso de fim de semana). Atualiza automaticamente a
-/// cada segundo atraves de um unico Timer centralizado.
+const Color _colorSitioCentro = Color(0xFF1E8E5A); // bloco 1 (verde)
+const Color _colorCentroUfpel = Color(0xFF2F6FB0); // bloco 2 (azul)
+const Color _colorUfpelCentro = Color(0xFF7C5CBF); // bloco 3 (roxo)
+const Color _colorCentroSitio = Color(0xFFC97B2E); // bloco 4 (laranja)
+const Color _colorSecaoIda = Color(0xFF1E8E5A);
+const Color _colorSecaoVolta = Color(0xFF7C5CBF);
+const Color _corBotaoAtualizar = Color(0xFF0B3D78);
+
+/// Tela unica do aplicativo: cabecalho com relogio e, para dias uteis,
+/// as quatro etapas da rota diaria (ida para a faculdade e volta para
+/// casa), ou o aviso de fim de semana. Atualiza automaticamente a cada
+/// segundo atraves de um unico Timer centralizado.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -75,83 +85,121 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
+      backgroundColor: const Color(0xFFF4F6F5),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'HORÁRIOS DE ÔNIBUS',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 1.1,
-                  color: theme.colorScheme.onSurfaceVariant,
+        child: Column(
+          children: [
+            AppHeader(now: _now),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_errorMessage != null)
+                      _ErrorCard(message: _errorMessage!)
+                    else if (!ScheduleService.isWeekday(_now))
+                      _WeekendNotice(onOpenSite: _openHorariosSite)
+                    else
+                      _buildRoutes(),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _refresh,
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('Atualizar horários'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _corBotaoAtualizar,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    _buildFooterInfo(),
+                  ],
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                'Sítio Floresta',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.primary,
-                ),
-              ),
-              const SizedBox(height: 18),
-              CurrentClock(now: _now),
-              const SizedBox(height: 26),
-              const Divider(height: 1),
-              const SizedBox(height: 22),
-              if (_errorMessage != null)
-                _ErrorCard(message: _errorMessage!)
-              else if (!ScheduleService.isWeekday(_now))
-                _WeekendNotice(onOpenSite: _openHorariosSite)
-              else
-                _buildSchedules(),
-              const SizedBox(height: 8),
-              Center(
-                child: TextButton.icon(
-                  onPressed: _refresh,
-                  icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('Atualizar'),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildSchedules() {
+  Widget _buildRoutes() {
     try {
-      final nextCentroToSitio = ScheduleService.getNextBuses(
-        ScheduleService.centroToSitio,
-        _now,
-      );
-      final nextSitioToCentro = ScheduleService.getNextBuses(
-        ScheduleService.sitioToCentro,
-        _now,
-      );
+      final lastSitioCentro =
+          ScheduleService.getLastBus(ScheduleService.sitioToCentro, _now);
+      final nextSitioCentro =
+          ScheduleService.getNextBuses(ScheduleService.sitioToCentro, _now);
+      final lastCentroUfpel =
+          ScheduleService.getLastBus(ScheduleService.centroToUfpel, _now);
+      final nextCentroUfpel =
+          ScheduleService.getNextBuses(ScheduleService.centroToUfpel, _now);
+      final lastUfpelCentro =
+          ScheduleService.getLastBus(ScheduleService.ufpelToCentro, _now);
+      final nextUfpelCentro =
+          ScheduleService.getNextBuses(ScheduleService.ufpelToCentro, _now);
+      final lastCentroSitio =
+          ScheduleService.getLastBus(ScheduleService.centroToSitio, _now);
+      final nextCentroSitio =
+          ScheduleService.getNextBuses(ScheduleService.centroToSitio, _now);
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          DirectionCard(
-            title: 'CENTRO → SÍTIO FLORESTA',
-            nextBuses: nextCentroToSitio,
+          const SectionHeader(
+            icon: Icons.home_rounded,
+            title: 'IDA PARA A FACULDADE',
+            subtitle: 'Da sua casa até a UFPel / Anglo',
+            color: _colorSecaoIda,
+          ),
+          RouteBlock(
+            number: 1,
+            title: 'SÍTIO FLORESTA → CENTRO',
+            subtitle: 'Primeira etapa: do seu bairro para o Centro',
+            color: _colorSitioCentro,
+            lastBus: lastSitioCentro,
+            nextBuses: nextSitioCentro,
             now: _now,
           ),
-          DirectionCard(
-            title: 'SÍTIO FLORESTA → CENTRO',
-            nextBuses: nextSitioToCentro,
+          RouteBlock(
+            number: 2,
+            title: 'CENTRO → UFPel / ANGLO',
+            subtitle: 'Segunda etapa: do Centro para a Faculdade',
+            color: _colorCentroUfpel,
+            lastBus: lastCentroUfpel,
+            nextBuses: nextCentroUfpel,
+            now: _now,
+          ),
+          const SectionHeader(
+            icon: Icons.school_rounded,
+            title: 'VOLTA PARA CASA',
+            subtitle: 'Da UFPel / Anglo até o seu bairro',
+            color: _colorSecaoVolta,
+          ),
+          RouteBlock(
+            number: 3,
+            title: 'UFPel / ANGLO → CENTRO',
+            subtitle: 'Terceira etapa: da Faculdade para o Centro',
+            color: _colorUfpelCentro,
+            lastBus: lastUfpelCentro,
+            nextBuses: nextUfpelCentro,
+            now: _now,
+          ),
+          RouteBlock(
+            number: 4,
+            title: 'CENTRO → SÍTIO FLORESTA',
+            subtitle: 'Quarta etapa: do Centro para o seu bairro',
+            color: _colorCentroSitio,
+            lastBus: lastCentroSitio,
+            nextBuses: nextCentroSitio,
             now: _now,
           ),
         ],
@@ -161,6 +209,47 @@ class _HomeScreenState extends State<HomeScreen> {
         message: 'Não foi possível carregar os horários no momento.',
       );
     }
+  }
+
+  Widget _buildFooterInfo() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.info_outline_rounded, size: 18, color: Colors.black54),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Horários válidos de segunda a sexta-feira. Consulte '
+                  'também o site da Prati para mais informações.',
+                  style: TextStyle(fontSize: 12.5, color: Colors.black87),
+                ),
+                const SizedBox(height: 4),
+                InkWell(
+                  onTap: _openHorariosSite,
+                  child: const Text(
+                    _horariosSiteUrl,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: _corBotaoAtualizar,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

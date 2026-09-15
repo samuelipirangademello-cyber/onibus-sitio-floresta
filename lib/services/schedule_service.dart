@@ -12,6 +12,10 @@ class ScheduleService {
 
   static List<BusSchedule> get sitioToCentro => sitioFlorestaToCentro;
 
+  static List<BusSchedule> get centroToUfpel => centroToUfpelAnglo;
+
+  static List<BusSchedule> get ufpelToCentro => ufpelAngloToCentro;
+
   /// Retorna true se [date] cair em um dia util (segunda a sexta-feira).
   static bool isWeekday(DateTime date) {
     return date.weekday >= DateTime.monday && date.weekday <= DateTime.friday;
@@ -49,6 +53,33 @@ class ScheduleService {
     final diffSeconds = target.difference(now).inSeconds;
     if (diffSeconds <= 0) return 0;
     return (diffSeconds / 60).ceil();
+  }
+
+  /// Retorna o "ultimo horario" de [schedule] em relacao a [now]: o
+  /// horario mais recente daquele sentido que ja ocorreu antes do minuto
+  /// atual. Retorna null se nenhum horario do dia ainda ocorreu.
+  ///
+  /// Fica sempre imediatamente anterior ao primeiro item retornado por
+  /// [getNextBuses], sem sobreposicao entre os dois (um horario cujo
+  /// minuto seja exatamente igual ao atual continua sendo tratado como
+  /// "proximo"/"agora", nao como "ultimo").
+  static BusSchedule? getLastBus(List<BusSchedule> schedule, DateTime now) {
+    try {
+      final nowMinutes = now.hour * 60 + now.minute;
+      final sorted = [...schedule]
+        ..sort((a, b) => a.totalMinutes.compareTo(b.totalMinutes));
+      BusSchedule? last;
+      for (final bus in sorted) {
+        if (bus.totalMinutes < nowMinutes) {
+          last = bus;
+        } else {
+          break;
+        }
+      }
+      return last;
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Primeiro horario do dataset de [schedule], usado apenas como

@@ -73,6 +73,52 @@ void main() {
     });
   });
 
+  group('ScheduleService.getLastBus', () {
+    test('cenario 1: as 12:52, ultimo e o horario mais recente ja ocorrido', () {
+      final now = DateTime(2026, 9, 14, 12, 52);
+      expect(
+        ScheduleService.getLastBus(ScheduleService.centroToSitio, now)?.time,
+        '12:50',
+      );
+      expect(
+        ScheduleService.getLastBus(ScheduleService.sitioToCentro, now)?.time,
+        '12:50',
+      );
+    });
+
+    test('cenario 2: as 13:41, ultimo passa a ser 13:40', () {
+      final now = DateTime(2026, 9, 14, 13, 41);
+      expect(
+        ScheduleService.getLastBus(ScheduleService.centroToSitio, now)?.time,
+        '13:40',
+      );
+    });
+
+    test('cenario 3: antes do primeiro horario do dia, nao ha ultimo horario', () {
+      final now = DateTime(2026, 9, 14, 5, 0);
+      expect(
+        ScheduleService.getLastBus(ScheduleService.centroToSitio, now),
+        isNull,
+      );
+    });
+
+    test('cenario 4: apos o ultimo horario do dia, o ultimo e o derradeiro da lista', () {
+      final now = DateTime(2026, 9, 14, 23, 59);
+      expect(
+        ScheduleService.getLastBus(ScheduleService.centroToSitio, now)?.time,
+        '23:20',
+      );
+    });
+
+    test('um horario exatamente igual ao minuto atual nao e considerado ultimo', () {
+      final now = DateTime(2026, 9, 14, 16, 0);
+      expect(
+        ScheduleService.getLastBus(ScheduleService.centroToSitio, now)?.time,
+        '15:25',
+      );
+    });
+  });
+
   group('ScheduleService.minutesUntil', () {
     test('calcula minutos restantes corretamente (exemplo do spec)', () {
       final now = DateTime(2026, 9, 14, 15, 56);
@@ -90,6 +136,50 @@ void main() {
       final now = DateTime(2026, 9, 14, 16, 5);
       const bus = BusSchedule(time: '16:00', line: 'teste');
       expect(ScheduleService.minutesUntil(bus, now), 0);
+    });
+  });
+
+  group('ScheduleService — novos sentidos (Centro <-> UFPel / Anglo)', () {
+    test('centroToUfpel: proximos as 17:16 (exemplo do mockup)', () {
+      final now = DateTime(2026, 9, 15, 17, 16);
+      final next = ScheduleService.getNextBuses(
+        ScheduleService.centroToUfpel,
+        now,
+      );
+      expect(next.length, 2);
+      expect(next[0].time, '17:40');
+      expect(next[1].time, '17:57');
+    });
+
+    test('ufpelToCentro: proximos as 17:16 (exemplo do mockup)', () {
+      final now = DateTime(2026, 9, 15, 17, 16);
+      final next = ScheduleService.getNextBuses(
+        ScheduleService.ufpelToCentro,
+        now,
+      );
+      expect(next.length, 2);
+      expect(next[0].time, '17:25');
+      expect(next[1].time, '17:37');
+    });
+
+    test('ultimo horario dos quatro sentidos as 17:16 (exemplo do mockup)', () {
+      final now = DateTime(2026, 9, 15, 17, 16);
+      expect(
+        ScheduleService.getLastBus(ScheduleService.sitioToCentro, now)?.time,
+        '17:05',
+      );
+      expect(
+        ScheduleService.getLastBus(ScheduleService.centroToUfpel, now)?.time,
+        '17:15',
+      );
+      expect(
+        ScheduleService.getLastBus(ScheduleService.ufpelToCentro, now)?.time,
+        '16:57',
+      );
+      expect(
+        ScheduleService.getLastBus(ScheduleService.centroToSitio, now)?.time,
+        '16:57',
+      );
     });
   });
 }

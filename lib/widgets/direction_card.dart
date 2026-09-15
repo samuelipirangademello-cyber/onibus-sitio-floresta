@@ -8,12 +8,14 @@ import 'bus_time_card.dart';
 /// naquele dia.
 class DirectionCard extends StatelessWidget {
   final String title;
+  final BusSchedule? lastBus;
   final List<BusSchedule> nextBuses;
   final DateTime now;
 
   const DirectionCard({
     super.key,
     required this.title,
+    required this.lastBus,
     required this.nextBuses,
     required this.now,
   });
@@ -36,6 +38,16 @@ class DirectionCard extends StatelessWidget {
               color: theme.colorScheme.primary,
             ),
           ),
+          if (lastBus != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Último horário: ${lastBus!.time}',
+              style: TextStyle(
+                fontSize: 14,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
           const SizedBox(height: 10),
           if (nextBuses.isEmpty)
             Container(
